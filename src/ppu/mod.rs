@@ -85,6 +85,11 @@ impl Ppu {
         }
     }
 
+    /// Update mirroring in tick function of our_cpu
+    pub fn update_mirroring(&mut self, mirroring: Mirroring){
+        self.mirroring = mirroring;
+    }
+
     fn vram_read_mirrored(&self, addr: u16) -> u8 {
         self.vram[(self.mirror_address(addr) - 0x2000) as usize]
     }
@@ -136,7 +141,7 @@ impl Ppu {
 
     /// Write to a register of the PPU. This is supposed to be called from the CPU when a write occurs
     /// to one of the addresses as defined in the spec (and also mentioned in the docs of [`PpuRegister`])
-    pub fn write_ppu_register(&mut self, register: PpuRegister, value: u8) {
+    pub fn write_ppu_register(&mut self, register: PpuRegister, value: u8, mut cpu: &mut impl Cpu) {
         self.bus = value;
 
         match register {
@@ -178,7 +183,7 @@ impl Ppu {
             }
             PpuRegister::Data => {
                 match self.addr.addr {
-                    a @ 0..=0x1fff => log::debug!("write to read-only part of memory (chr rom) through ppu data register: 0x{a:0x}"),
+                    a @ 0..=0x1fff => cpu.ppu_memory_write(self.addr.addr, value),
                     a @ 0x2000..=0x2fff => {
                         self.vram[self.mirror_address(a) as usize - 0x2000] = value;
                     }
